@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#f0c040">
+    <title>Gold Spot — USD/oz</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🥇</text></svg>">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { width: 100%; height: 100%; overflow: hidden; }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: #0d1117;
+            color: #e6edf3;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ── INSTALL BANNER ── */
+        #installBanner {
+            display: none;
+            background: #f0c040;
+            color: #0d1117;
+            padding: 8px 16px;
+            font-size: 0.8em;
+            font-weight: 600;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        #installBanner.show { display: flex; }
+        #installBanner button {
+            padding: 4px 12px; border: none; border-radius: 4px;
+            cursor: pointer; font-weight: 700; font-size: 0.85em;
+        }
+        #installBtn    { background: #0d1117; color: #f0c040; }
+        #closeBanner   { background: rgba(0,0,0,0.2); color: #0d1117; }
+
+        /* ── SCROLL CONTAINER ── */
+        .scroll { flex: 1; overflow-y: auto; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+
+        /* ── HEADER ── */
+        .header { display: flex; align-items: center; justify-content: space-between; padding: 2px 0; }
+        .header h1 { font-size: 1em; font-weight: 700; color: #f0c040; letter-spacing: 0.5px; }
+        .header .source-tag {
+            font-size: 0.65em; color: #8b949e; background: #161b22;
+            border: 1px solid #30363d; border-radius: 4px;
+            padding: 2px 8px; max-width: 55%; text-align: right;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+
+        /* ── STATUS ── */
+        .status {
+            font-size: 0.75em; font-weight: 600;
+            padding: 7px 12px; border-radius: 6px;
+            display: flex; align-items: center; gap: 6px;
+            border: 1px solid;
+        }
+        .status.loading { color: #e3b341; border-color: rgba(227,179,65,.3); background: rgba(227,179,65,.07); }
+        .status.ok      { color: #3fb950; border-color: rgba(63,185,80,.3);  background: rgba(63,185,80,.07); }
+        .status.err     { color: #f85149; border-color: rgba(248,81,73,.3);  background: rgba(248,81,73,.07); }
+
+        /* ── BIG PRICE CARDS ── */
+        .price-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+        .pcard {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 10px;
+            padding: 14px 12px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .pcard::after {
+            content: '';
+            position: absolute; top: 0; left: 0; right: 0; height: 2px;
+        }
+        .pcard.bid::after { background: linear-gradient(90deg,#238636,#3fb950); }
+        .pcard.ask::after { background: linear-gradient(90deg,#da3633,#f85149); }
+
+        .pcard .lbl { font-size: 0.65em; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
+        .pcard.bid .lbl { color: #3fb950; }
+        .pcard.ask .lbl { color: #f85149; }
+
+        .pcard .price {
+            font-size: 1.75em; font-weight: 800; color: #fff;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -0.5px;
+        }
+        .pcard .unit { font-size: 0.6em; color: #8b949e; margin-top: 2px; margin-bottom: 8px; }
+
+        .pcard .chg {
+            font-size: 0.7em; font-weight: 600;
+            padding: 2px 8px; border-radius: 20px; display: inline-block;
+        }
+        .chg.up   { background: rgba(63,185,80,.15);  color: #3fb950; }
+        .chg.down { background: rgba(248,81,73,.15);  color: #f85149; }
+        .chg.flat { background: rgba(139,148,158,.1); color: #8b949e; }
+
+        /* ── SPREAD INFO ── */
+        .spread-row {
+            display: flex; justify-content: center; gap: 20px;
+            font-size: 0.7em; color: #8b949e;
+            background: #161b22; border: 1px solid #30363d;
+            border-radius: 6px; padding: 7px 12px;
+        }
+        .spread-row span { color: #e6edf3; font-weight: 600; }
+
+        /* ── SECTION CARD ── */
+        .scard {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 10px;
+            padding: 14px;
+        }
+        .scard h2 {
+            font-size: 0.82em; font-weight: 700; color: #8b949e;
+            letter-spacing: 0.5px; text-transform: uppercase;
+            margin-bottom: 10px; display: flex; align-items: center; gap: 8px;
+        }
+        .badge {
+            background: #f0c040; color: #0d1117;
+            font-size: 0.8em; font-weight: 800;
+            padding: 1px 7px; border-radius: 10px;
+        }
+
+        /* ── FORM ── */
+        .form-grid  { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+        .fgroup label { display: block; font-size: 0.68em; color: #8b949e; margin-bottom: 3px; font-weight: 600; }
+        .fgroup select,
+        .fgroup input[type=number] {
+            width: 100%; padding: 7px 9px;
+            background: #0d1117; border: 1px solid #30363d;
+            border-radius: 6px; color: #e6edf3;
+            font-size: 0.85em; font-family: inherit;
+        }
+        .fgroup select option { background: #161b22; }
+
+        /* ── BUTTONS ── */
+        .btn {
+            width: 100%; padding: 8px; border: none; border-radius: 6px;
+            font-size: 0.85em; font-weight: 700; cursor: pointer; font-family: inherit;
+            transition: opacity .15s;
+        }
+        .btn:active { opacity: .75; }
+        .btn-gold { background: #f0c040; color: #0d1117; }
+        .btn-del  {
+            background: transparent; color: #f85149;
+            border: 1px solid rgba(248,81,73,.3);
+            padding: 4px 10px; font-size: 0.72em;
+            width: auto; border-radius: 4px;
+        }
+
+        /* ── ALERT LIST ── */
+        .alert-list { max-height: 200px; overflow-y: auto; margin-top: 8px; }
+        .aitem {
+            display: flex; align-items: center; justify-content: space-between;
+            background: #0d1117; border: 1px solid #30363d;
+            border-radius: 6px; padding: 8px 10px; margin-bottom: 6px;
+            font-size: 0.8em;
+        }
+        .aitem.hit { border-color: rgba(227,179,65,.4); background: rgba(227,179,65,.05); }
+        .aitem .atype { font-weight: 700; color: #f0c040; }
+        .aitem .aprice { color: #8b949e; margin-top: 1px; }
+
+        /* ── CHART ── */
+        .chart-wrap { background: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 12px; }
+        .chart-wrap h2 { font-size: 0.78em; font-weight: 700; color: #8b949e; letter-spacing: .5px; text-transform: uppercase; margin-bottom: 8px; }
+        canvas { width: 100% !important; }
+
+        /* ── HISTORY TABLE ── */
+        .htable { width: 100%; border-collapse: collapse; font-size: 0.78em; }
+        .htable th { color: #8b949e; font-size: .8em; font-weight: 600; padding: 6px 8px; text-align: left; border-bottom: 1px solid #30363d; }
+        .htable td { padding: 6px 8px; border-bottom: 1px solid #21262d; color: #c9d1d9; }
+
+        /* ── NOTIFICATION ── */
+        #notifWrap { position: fixed; bottom: 14px; right: 12px; z-index: 9999; }
+        .notif {
+            background: #161b22; border: 1px solid #30363d;
+            border-radius: 8px; padding: 10px 14px;
+            margin-top: 6px; font-size: 0.82em; max-width: 240px;
+            box-shadow: 0 8px 24px rgba(0,0,0,.6);
+            animation: popIn .25s ease;
+        }
+        @keyframes popIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .notif.ok  { border-left: 3px solid #3fb950; }
+        .notif.err { border-left: 3px solid #f85149; }
+        .notif.warn{ border-left: 3px solid #f0c040; }
+
+        /* ── SPINNER ── */
+        .spin {
+            display: inline-block; width: 11px; height: 11px;
+            border: 2px solid rgba(255,255,255,.2); border-radius: 50%;
+            border-top-color: currentColor;
+            animation: rotate .6s linear infinite;
+        }
+        @keyframes rotate { to { transform: rotate(360deg); } }
+
+        @media (max-width: 360px) {
+            .pcard .price { font-size: 1.45em; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="installBanner">
+    <span>🥇 ติดตั้งแอพ Gold Spot</span>
+    <button id="installBtn">ติดตั้ง</button>
+    <button id="closeBanner">✕</button>
+</div>
+
+<div class="scroll">
+
+    <div class="header">
+        <h1>🥇 GOLD SPOT — XAU/USD</h1>
+        <div class="source-tag" id="sourceTag">—</div>
+    </div>
+
+    <!-- Status -->
+    <div class="status loading" id="status">
+        <span class="spin"></span> กำลังดึงราคา...
+    </div>
+
+    <!-- Bid / Ask -->
+    <div class="price-row">
+        <div class="pcard bid">
+            <div class="lbl">Bid (ซื้อ)</div>
+            <div class="price" id="bidPrice">—</div>
+            <div class="unit">USD / troy oz</div>
+            <div class="chg flat" id="bidChg">—</div>
+        </div>
+        <div class="pcard ask">
+            <div class="lbl">Ask (ขาย)</div>
+            <div class="price" id="askPrice">—</div>
+            <div class="unit">USD / troy oz</div>
+            <div class="chg flat" id="askChg">—</div>
+        </div>
+    </div>
+
+    <!-- Spread + mid -->
+    <div class="spread-row">
+        <div>Mid <span id="midPrice">—</span></div>
+        <div>Spread <span id="spreadVal">—</span></div>
+        <div>อัปเดต <span id="lastUpdate">—</span></div>
+    </div>
+
+    <!-- Alerts -->
+    <div class="scard">
+        <h2>🔔 Price Alerts <span class="badge" id="alertCount">0</span></h2>
+        <div class="form-grid">
+            <div class="fgroup">
+                <label>ประเภท</label>
+                <select id="aType">
+                    <option value="bid">Bid (ซื้อ)</option>
+                    <option value="ask">Ask (ขาย)</option>
+                </select>
+            </div>
+            <div class="fgroup">
+                <label>เงื่อนไข</label>
+                <select id="aCond">
+                    <option value="gte">≥ สูงกว่า</option>
+                    <option value="lte">≤ ต่ำกว่า</option>
+                </select>
+            </div>
+        </div>
+        <div class="fgroup" style="margin-bottom:8px;">
+            <label>ราคา (USD/oz)</label>
+            <input type="number" id="aPrice" placeholder="เช่น 3350.00" step="0.1">
+        </div>
+        <button class="btn btn-gold" onclick="addAlert()">+ เพิ่มแจ้งเตือน</button>
+        <div class="alert-list" id="alertList">
+            <p style="text-align:center;color:#8b949e;font-size:.8em;padding:12px 0;">ยังไม่มีแจ้งเตือน</p>
+        </div>
+    </div>
+
+    <!-- Chart -->
+    <div class="chart-wrap">
+        <h2>📈 Price History (USD/oz)</h2>
+        <canvas id="chart" height="200"></canvas>
+    </div>
+
+    <!-- History -->
+    <div class="scard">
+        <h2>📋 Recent Ticks</h2>
+        <table class="htable">
+            <thead><tr><th>Time</th><th>Bid</th><th>Ask</th><th>Spread</th></tr></thead>
+            <tbody id="histBody">
+                <tr><td colspan="4" style="color:#8b949e;text-align:center;padding:10px;">รอข้อมูล...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+<div id="notifWrap"></div>
+
+<script>
+// ================================================================
+//  STATE
+// ================================================================
+const state = {
+    bid: 0, ask: 0,
+    prevBid: 0, prevAsk: 0,
+    source: '',
+    ts: null,
+    history: []
+};
+let alerts   = [];
+let timer    = null;
+let chart    = null;
+let deferred = null;
+
+// ================================================================
+//  LOAD Chart.js
+// ================================================================
+const cjs = document.createElement('script');
+cjs.src   = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js';
+document.head.appendChild(cjs);
+
+// ================================================================
+//  PARSERS & HELPERS
+// ================================================================
+
+// MTS Gold Spot Parser
+function parseMtsSpot(d) {
+    const spot = parseFloat(d?.GoldSpot || d?.gold_spot || d?.spot || d?.price);
+    if (spot > 500) {
+        return { bid: +(spot - 0.25).toFixed(2), ask: +(spot + 0.25).toFixed(2) };
+    }
+    if (Array.isArray(d) && d.length > 0) {
+        const item = d[0];
+        const val = parseFloat(item?.GoldSpot || item?.price || item?.spot);
+        if (val > 500) return { bid: +(val - 0.25).toFixed(2), ask: +(val + 0.25).toFixed(2) };
+    }
+    return null;
+}
+
+// YLG Gold Spot Parser
+function parseYlgSpot(d) {
+    const spot = parseFloat(d?.spot_price || d?.gold_spot || d?.spot || d?.price || d?.ask_spot || d?.data?.spot);
+    if (spot > 500) {
+        return { bid: +(spot - 0.25).toFixed(2), ask: +(spot + 0.25).toFixed(2) };
+    }
+    return null;
+}
+
+// Yahoo Finance v8/chart
+function parseYahooChart(d) {
+    const price = d?.chart?.result?.[0]?.meta?.regularMarketPrice;
+    if (!price || price < 500) return null;
+    return { bid: +(price - 0.15).toFixed(2), ask: +(price + 0.15).toFixed(2) };
+}
+
+// Yahoo Finance v7/quote
+function parseYahooQuote(d) {
+    const r = d?.quoteResponse?.result?.[0];
+    if (!r) return null;
+    const price = r.regularMarketPrice;
+    if (!price || price < 500) return null;
+    const bid = r.bid || r.regularMarketBid || +(price - 0.15).toFixed(2);
+    const ask = r.ask || r.regularMarketAsk || +(price + 0.15).toFixed(2);
+    return { bid: +parseFloat(bid).toFixed(2), ask: +parseFloat(ask).toFixed(2) };
+}
+
+function alloriginsUrl(targetUrl) {
+    const sep = targetUrl.includes('?') ? '&' : '?';
+    return 'https://api.allorigins.win/get?url=' + encodeURIComponent(targetUrl + sep + '_t=' + Date.now());
+}
+
+function viaProxy(innerFn) {
+    return d => {
+        try {
+            const inner = typeof d?.contents === 'string' ? JSON.parse(d.contents) : (d?.contents || d);
+            return innerFn(inner);
+        } catch { return null; }
+    };
+}
+
+async function trySource(url, parse, label, ms = 9000) {
+    const ctrl = new AbortController();
+    const t    = setTimeout(() => ctrl.abort(), ms);
+    try {
+        const res  = await fetch(url, { signal: ctrl.signal });
+        clearTimeout(t);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json = await res.json();
+        const r    = parse(json);
+        if (r && r.bid > 500) {
+            console.log(`✓ ${label}: ${r.bid}`);
+            return { ...r, source: label };
+        }
+        throw new Error('invalid data');
+    } catch (e) {
+        clearTimeout(t);
+        console.warn(`✗ ${label}: ${e.message}`);
+        return null;
+    }
+}
+
+// ═══════════════════════════════════════════════════════
+//  FETCH PRICE (MTS/YLG FIRST, FOREX/YAHOO/PAXG FALLBACK)
+// ═══════════════════════════════════════════════════════
+const MTS_SPOT_URL  = 'https://www.mtsgold.co.th/th/ajax/price_gold.php';
+const YLG_SPOT_URL  = 'https://www.ylgbullion.co.th/api/gold-price';
+const YF_GCF_QUOTE  = 'https://query1.finance.yahoo.com/v7/finance/quote?symbols=GC%3DF&fields=regularMarketPrice,bid,ask';
+const YF_XAU_QUOTE  = 'https://query1.finance.yahoo.com/v7/finance/quote?symbols=XAUUSD%3DX&fields=regularMarketPrice,bid,ask';
+
+async function fetchPrice() {
+    const sources = [
+        // ── 1. MTS Gold Spot (Direct) ──
+        trySource(MTS_SPOT_URL, parseMtsSpot, 'MTS Gold Spot (Direct)'),
+
+        // ── 2. MTS Gold Spot (Proxy) ──
+        trySource(alloriginsUrl(MTS_SPOT_URL), viaProxy(parseMtsSpot), 'MTS Gold Spot (Proxy)', 15000),
+
+        // ── 3. YLG Gold Spot (Direct) ──
+        trySource(YLG_SPOT_URL, parseYlgSpot, 'YLG Gold Spot (Direct)'),
+
+        // ── 4. YLG Gold Spot (Proxy) ──
+        trySource(alloriginsUrl(YLG_SPOT_URL), viaProxy(parseYlgSpot), 'YLG Gold Spot (Proxy)', 15000),
+
+        // ── 5. Swissquote public forex feed (ราคา Spot ตรงตามแอพเทรด) ──
+        trySource(
+            'https://forex-data-feed.swissquote.com/public-quotes/bboquotes/instrument/XAU/USD',
+            d => {
+                const arr = Array.isArray(d) ? d : [d];
+                const entry   = arr[0];
+                const profile = entry?.spreadProfilePrices?.find(p => p.spreadProfile === 'standard')
+                             || entry?.spreadProfilePrices?.[0];
+                if (!profile) return null;
+                const bid = parseFloat(profile.bid), ask = parseFloat(profile.ask);
+                return bid > 500 ? { bid: +bid.toFixed(2), ask: +ask.toFixed(2) } : null;
+            },
+            'XAU/USD Spot (Swissquote)'
+        ),
+
+        // ── 6. Yahoo XAUUSD=X via allorigins (Spot จริง) ──
+        trySource(alloriginsUrl(YF_XAU_QUOTE), viaProxy(parseYahooQuote), 'XAU/USD Spot (Yahoo quote)', 15000),
+
+        // ── 7. Yahoo GC=F via allorigins (Gold Futures) ──
+        trySource(alloriginsUrl(YF_GCF_QUOTE), viaProxy(parseYahooQuote), 'Gold Futures GC=F (Yahoo quote)', 15000),
+
+        // ── 8. Binance PAXG/USDT (Crypto ทองคำ) ──
+        trySource(
+            'https://api.binance.com/api/v3/ticker/bookTicker?symbol=PAXGUSDT',
+            d => ({ bid: +parseFloat(d.bidPrice).toFixed(2), ask: +parseFloat(d.askPrice).toFixed(2) }),
+            'PAXG/USDT Binance [~spot]'
+        )
+    ];
+
+    return new Promise((resolve, reject) => {
+        let remaining = sources.length;
+        sources.forEach(p => p.then(r => {
+            remaining--;
+            if (r) resolve(r);
+            else if (remaining === 0) reject(new Error('ไม่สามารถดึงราคาทองจากทุกแหล่งข้อมูลได้'));
+        }));
+    });
+}
+
+// ================================================================
+//  UPDATE CYCLE
+// ================================================================
+async function update() {
+    setStatus('loading', '<span class="spin"></span> กำลังดึงราคา...');
+    try {
+        const data = await fetchPrice();
+
+        state.prevBid = state.bid;
+        state.prevAsk = state.ask;
+        state.bid     = data.bid;
+        state.ask     = data.ask;
+        state.source  = data.source;
+        state.ts      = new Date();
+
+        state.history.push({ ts: new Date(), bid: data.bid, ask: data.ask });
+        if (state.history.length > 1000) state.history.shift();
+
+        renderPrices();
+        renderChart();
+        renderHistory();
+        checkAlerts();
+        persist();
+
+        setStatus('ok', `✓ ${data.source}`);
+        document.getElementById('sourceTag').textContent = data.source;
+    } catch (e) {
+        setStatus('err', '⚠ ' + e.message);
+    }
+}
+
+// ================================================================
+//  RENDER PRICES
+// ================================================================
+function fmt(n) {
+    return n > 0 ? n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—';
+}
+
+function renderPrices() {
+    document.getElementById('bidPrice').textContent = fmt(state.bid);
+    document.getElementById('askPrice').textContent = fmt(state.ask);
+
+    const mid    = ((state.bid + state.ask) / 2).toFixed(2);
+    const spread = (state.ask - state.bid).toFixed(2);
+    document.getElementById('midPrice').textContent  = '$' + parseFloat(mid).toLocaleString('en-US', {minimumFractionDigits: 2});
+    document.getElementById('spreadVal').textContent = '$' + spread;
+    document.getElementById('lastUpdate').textContent = state.ts?.toLocaleTimeString('th-TH') || '—';
+
+    renderChg('bidChg', state.prevBid, state.bid);
+    renderChg('askChg', state.prevAsk, state.ask);
+}
+
+function renderChg(id, prev, cur) {
+    const el = document.getElementById(id);
+    if (!prev || prev === cur) {
+        el.textContent = '— ไม่เปลี่ยน'; el.className = 'chg flat'; return;
+    }
+    const diff = (cur - prev).toFixed(2);
+    const pct  = ((Math.abs(cur - prev) / prev) * 100).toFixed(3);
+    if (cur > prev) {
+        el.textContent = `▲ +$${diff} (${pct}%)`; el.className = 'chg up';
+    } else {
+        el.textContent = `▼ -$${Math.abs(diff)} (${pct}%)`; el.className = 'chg down';
+    }
+}
+
+// ================================================================
+//  CHART
+// ================================================================
+function renderChart() {
+    if (state.history.length < 2) return;
+    const pts   = state.history.slice(-60);
+    const labels = pts.map(p => p.ts.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+    const bids   = pts.map(p => p.bid);
+    const asks   = pts.map(p => p.ask);
+
+    const ctx = document.getElementById('chart').getContext('2d');
+    if (chart) chart.destroy();
+    chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [
+                { label: 'Bid', data: bids, borderColor: '#3fb950', backgroundColor: 'rgba(63,185,80,.06)',
+                  tension: 0.3, borderWidth: 1.5, pointRadius: 0, fill: true },
+                { label: 'Ask', data: asks, borderColor: '#f85149', backgroundColor: 'rgba(248,81,73,.06)',
+                  tension: 0.3, borderWidth: 1.5, pointRadius: 0, fill: true },
+            ]
+        },
+        options: {
+            animation: false,
+            responsive: true,
+            plugins: { legend: { labels: { color: '#8b949e', font: { size: 10 } } } },
+            scales: {
+                x: { ticks: { color: '#8b949e', maxTicksLimit: 5, font: { size: 9 } }, grid: { color: '#21262d' } },
+                y: { ticks: { color: '#8b949e', callback: v => '$' + v.toLocaleString('en-US'), font: { size: 9 } }, grid: { color: '#21262d' } }
+            }
+        }
+    });
+}
+
+// ================================================================
+//  HISTORY TABLE
+// ================================================================
+function renderHistory() {
+    const tbody = document.getElementById('histBody');
+    if (state.history.length === 0) return;
+    tbody.innerHTML = state.history.slice(-12).reverse().map(p => {
+        const sp = (p.ask - p.bid).toFixed(2);
+        return `<tr>
+            <td>${p.ts.toLocaleTimeString('th-TH')}</td>
+            <td style="color:#3fb950">$${fmt(p.bid)}</td>
+            <td style="color:#f85149">$${fmt(p.ask)}</td>
+            <td style="color:#8b949e">$${sp}</td>
+        </tr>`;
+    }).join('');
+}
+
+// ================================================================
+//  ALERTS
+// ================================================================
+function addAlert() {
+    const type  = document.getElementById('aType').value;
+    const cond  = document.getElementById('aCond').value;
+    const price = parseFloat(document.getElementById('aPrice').value);
+    if (!price || price <= 0) { toast('กรอกราคาเป็นตัวเลข USD', 'err'); return; }
+    alerts.push({ id: Date.now(), type, cond, price, hit: false });
+    document.getElementById('aPrice').value = '';
+    renderAlerts(); persist();
+    toast('เพิ่มแจ้งเตือนแล้ว', 'ok');
+}
+
+function deleteAlert(id) { alerts = alerts.filter(a => a.id !== id); renderAlerts(); persist(); }
+
+function renderAlerts() {
+    document.getElementById('alertCount').textContent = alerts.length;
+    const el = document.getElementById('alertList');
+    if (!alerts.length) { el.innerHTML = '<p style="text-align:center;color:#8b949e;font-size:.8em;padding:12px 0;">ยังไม่มีแจ้งเตือน</p>'; return; }
+    const condLbl = { gte: '≥', lte: '≤' };
+    const typeLbl = { bid: 'Bid', ask: 'Ask' };
+    el.innerHTML = alerts.map(a => `
+        <div class="aitem ${a.hit ? 'hit' : ''}">
+            <div>
+                <div class="atype">${typeLbl[a.type]} ${condLbl[a.cond]} $${a.price.toLocaleString('en-US', {minimumFractionDigits: 2})}</div>
+                <div class="aprice">${a.hit ? '✓ แจ้งเตือนแล้ว' : 'รอดักราคา'}</div>
+            </div>
+            <button class="btn btn-del" onclick="deleteAlert(${a.id})">ลบ</button>
+        </div>
+    `).join('');
+}
+
+function checkAlerts() {
+    alerts.forEach(a => {
+        if (a.hit) return;
+        const cur = a.type === 'bid' ? state.bid : state.ask;
+        const hit = a.cond === 'gte' ? cur >= a.price : cur <= a.price;
+        if (hit) {
+            a.hit = true;
+            const msg = `🔔 ${a.type.toUpperCase()} ${a.cond === 'gte' ? '≥' : '≤'} $${a.price.toFixed(2)} — ราคาตอนนี้ $${cur.toFixed(2)}`;
+            toast(msg, 'warn');
+            beep();
+            if (Notification?.permission === 'granted') new Notification('Gold Alert', { body: msg });
+            renderAlerts(); persist();
+        }
+    });
+}
+
+// ================================================================
+//  HELPERS
+// ================================================================
+function setStatus(cls, html) {
+    const el = document.getElementById('status');
+    el.innerHTML = html; el.className = `status ${cls}`;
+}
+
+function toast(msg, type = 'ok') {
+    const el = Object.assign(document.createElement('div'), { className: `notif ${type}`, textContent: msg });
+    document.getElementById('notifWrap').appendChild(el);
+    setTimeout(() => el.remove(), 4000);
+}
+
+function beep() {
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.connect(g); g.connect(ctx.destination);
+        o.frequency.value = 880;
+        g.gain.setValueAtTime(.3, ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(.001, ctx.currentTime + .5);
+        o.start(); o.stop(ctx.currentTime + .5);
+    } catch {}
+}
+
+// ================================================================
+//  PERSIST
+// ================================================================
+function persist() {
+    localStorage.setItem('goldspot', JSON.stringify({
+        alerts,
+        history: state.history.slice(-200)
+    }));
+}
+
+function hydrate() {
+    try {
+        const d = JSON.parse(localStorage.getItem('goldspot') || '{}');
+        alerts = (d.alerts || []);
+        state.history = (d.history || []).map(h => ({ ...h, ts: new Date(h.ts) }));
+        renderAlerts();
+    } catch {}
+}
+
+// ================================================================
+//  AUTO UPDATE (1 วินาทีเรียลไทม์)
+// ================================================================
+function startTimer() {
+    if (timer) clearInterval(timer);
+    update();
+    timer = setInterval(update, 1000);
+}
+
+// ================================================================
+//  PWA
+// ================================================================
+window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault(); deferred = e;
+    document.getElementById('installBanner').classList.add('show');
+});
+document.getElementById('installBtn').addEventListener('click', async () => {
+    if (!deferred) return;
+    deferred.prompt(); await deferred.userChoice;
+    deferred = null;
+    document.getElementById('installBanner').classList.remove('show');
+});
+document.getElementById('closeBanner').addEventListener('click', () => {
+    document.getElementById('installBanner').classList.remove('show');
+});
+
+// Manifest
+(function () {
+    const m = { name: 'Gold Spot USD/oz', short_name: 'Gold Spot', display: 'standalone', theme_color: '#f0c040', background_color: '#0d1117', start_url: window.location.href };
+    const lk = document.createElement('link');
+    lk.rel = 'manifest';
+    lk.href = URL.createObjectURL(new Blob([JSON.stringify(m)], { type: 'application/manifest+json' }));
+    document.head.appendChild(lk);
+})();
+
+// ================================================================
+//  INIT
+// ================================================================
+window.addEventListener('load', () => {
+    hydrate();
+    if (Notification && Notification.permission === 'default') Notification.requestPermission();
+    startTimer();
+});
+window.addEventListener('beforeunload', () => { if (timer) clearInterval(timer); });
+</script>
+</body>
+</html>
